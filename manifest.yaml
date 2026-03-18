@@ -190,6 +190,15 @@ formats:
       Structured release notes with changelog, breaking changes, upgrade
       instructions, and contributor acknowledgment.
 
+  - name: agent-instructions
+    path: formats/agent-instructions.md
+    produces: agent-instruction-file
+    description: >
+      Output format for persistent agent instruction files. For GitHub
+      Copilot, produces composable skill files under
+      .github/instructions/*.instructions.md with applyTo targeting.
+      Also supports Claude Code (CLAUDE.md) and Cursor (.cursorrules).
+
 taxonomies:
   - name: stack-lifetime-hazards
     path: taxonomies/stack-lifetime-hazards.md
@@ -287,6 +296,18 @@ templates:
         changes that maintain correctness at each step.
       persona: software-architect
       protocols: [anti-hallucination, self-verification]
+
+  agent-authoring:
+    - name: author-agent-instructions
+      path: templates/author-agent-instructions.md
+      description: >
+        Assemble PromptKit components (persona, protocols) into composable
+        agent skill files. For GitHub Copilot, produces individual
+        .github/instructions/*.instructions.md files with applyTo targeting.
+        Also supports Claude Code (CLAUDE.md) and Cursor (.cursorrules).
+      persona: spl-contributor
+      protocols: [anti-hallucination, self-verification]
+      format: agent-instructions
 
   contribution:
     - name: extend-library
