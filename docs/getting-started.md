@@ -59,10 +59,14 @@ and you're running.
 npx promptkit
 ```
 
-Interactive modeauto-detects your LLM CLI (GitHub Copilot CLI or Claude
+Interactive mode auto-detects your LLM CLI (GitHub Copilot CLI or Claude
 Code), copies PromptKit's content to a temp directory, and launches an
 interactive session with `bootstrap.md` as the custom instruction. The
 bootstrap engine walks you through:
+
+> **Tip:** If you cloned the repo and are using Copilot CLI directly,
+> just run `copilot` from the repo root — the `/promptkit` skill
+> activates automatically, no `npx` needed.
 
 1. What do you want to accomplish?
 2. Template recommendation
