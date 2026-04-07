@@ -109,15 +109,11 @@ describe("Launch Module", () => {
     }
 
     // Run an inline Node script that requires launch.js by absolute path
-    // and calls detectCli() with PATH set to mockDir.
-    // On Windows, System32 must stay in PATH so `where.exe` can be located.
+    // and calls detectCli() with PATH set to mockDir only.
+    // isOnPath() in launch.js searches PATH directories directly (no `which`),
+    // so mockDir is sufficient — no system binary directories are needed.
     function runDetectCli() {
-      const sys32 = process.platform === "win32"
-        ? path.join(process.env.SystemRoot || "C:\\Windows", "System32")
-        : "";
-      const testPath = sys32
-        ? `${mockDir}${path.delimiter}${sys32}`
-        : mockDir;
+      const testPath = mockDir;
       const script = [
         `process.env.PATH = ${JSON.stringify(testPath)};`,
         `delete require.cache[${JSON.stringify(launchModulePath)}];`,
@@ -239,6 +235,23 @@ describe("Launch Module", () => {
         "detectCli should be exported"
       );
     });
+
+    it("TC-CLI-084: spawn is not called with shell: true (no arg-splitting regression)", () => {
+      // The v0.6.0 bug was caused by shell: true in spawn() which split the
+      // bootstrap prompt string into multiple arguments. This source-level check
+      // ensures the option is never re-introduced.
+      const launchSrc = fs.readFileSync(launchModulePath, "utf8");
+      // Filter out comment lines to avoid false positives from comments that
+      // mention shell: true while explaining why it must not be used.
+      const nonCommentLines = launchSrc
+        .split("\n")
+        .filter((l) => !l.trim().startsWith("//"))
+        .join("\n");
+      assert.ok(
+        !/\bshell\s*:\s*true\b/.test(nonCommentLines),
+        "launch.js must not pass shell: true to spawn() — doing so splits the bootstrap prompt into multiple arguments"
+      );
+    });
   });
 
   describe("CWD preservation and staging directory access", () => {
@@ -353,6 +366,72 @@ describe("Launch Module", () => {
           bootstrapArg && path.isAbsolute(bootstrapArg.replace("Read and execute ", "")),
           `${cliName} bootstrap prompt should contain an absolute path to bootstrap.md`
         );
+      });
+    }
+  });
+
+  describe("--dry-run flag", () => {
+    for (const cliName of ["copilot", "gh-copilot", "claude"]) {
+      it(`TC-CLI-085: --dry-run prints spawn command for ${cliName} without launching`, () => {
+        // --dry-run must print the command and args then exit 0 without
+        // spawning the real LLM CLI.  We run with an empty PATH so that
+        // no real CLI can be found, proving nothing was actually spawned.
+        const emptyBinDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), "promptkit-dryrun-empty-")
+        );
+
+        let stdout = "";
+        let exitCode = 0;
+        try {
+          try {
+            stdout = execFileSync(
+              process.execPath,
+              [cliPath, "interactive", "--cli", cliName, "--dry-run"],
+              {
+                encoding: "utf8",
+                timeout: 15000,
+                env: envWithPath(emptyBinDir),
+              }
+            );
+          } catch (err) {
+            stdout = (err.stdout || "").toString();
+            exitCode = err.status;
+          }
+
+          assert.strictEqual(exitCode, 0, `--dry-run should exit 0 for ${cliName}`);
+          assert.ok(
+            stdout.includes("DRY RUN"),
+            `--dry-run output should contain 'DRY RUN' for ${cliName}`
+          );
+
+          // Parse the args line as JSON so we verify structure, not wording.
+          const lines = stdout.split("\n");
+          const argsLine = lines.find((l) => l.trim().startsWith("args:"));
+          assert.ok(argsLine, `--dry-run output should include an 'args:' line for ${cliName}`);
+          const parsedArgs = JSON.parse(argsLine.trim().slice("args:".length).trim());
+
+          // The bootstrap prompt must appear as exactly one element containing bootstrap.md,
+          // not split across multiple elements (the shell: true regression).
+          const bootstrapArgs = parsedArgs.filter((a) => a.includes("bootstrap.md"));
+          assert.strictEqual(
+            bootstrapArgs.length,
+            1,
+            `bootstrap.md should appear in exactly one arg for ${cliName} (shell-splitting regression)`
+          );
+          // The path in the bootstrap arg must be absolute.
+          // Strip the known prefix rather than splitting on spaces (paths may contain spaces).
+          const bootstrapArg = bootstrapArgs[0];
+          const bootstrapPrefix = "Read and execute ";
+          const bootstrapPath = bootstrapArg.startsWith(bootstrapPrefix)
+            ? bootstrapArg.slice(bootstrapPrefix.length)
+            : bootstrapArg;
+          assert.ok(
+            path.isAbsolute(bootstrapPath),
+            `bootstrap arg must contain an absolute path for ${cliName}`
+          );
+        } finally {
+          fs.rmSync(emptyBinDir, { recursive: true, force: true });
+        }
       });
     }
   });
