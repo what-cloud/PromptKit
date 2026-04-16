@@ -699,6 +699,14 @@ formats:
       Prioritized triage report for issues, pull requests, or work items.
       Classifies items by priority, effort, and recommended action.
 
+  - name: pr-comment-responses
+    path: formats/pr-comment-responses.md
+    produces: pr-comment-responses
+    description: >
+      Output format for responding to pull request review comments.
+      Structures per-thread analysis, contradiction detection, and
+      response generation in either document or action mode.
+
   - name: release-notes
     path: formats/release-notes.md
     produces: release-notes
@@ -1349,9 +1357,11 @@ templates:
       path: templates/investigate-security.md
       description: >
         Security audit of code or a system component. Systematic
-        vulnerability analysis with severity classification.
+        vulnerability analysis with severity classification. Applies
+        exhaustive path tracing selectively to parser/decoder functions
+        that handle untrusted structured input.
       persona: security-auditor
-      protocols: [anti-hallucination, self-verification, operational-constraints, security-vulnerability]
+      protocols: [anti-hallucination, self-verification, operational-constraints, adversarial-falsification, security-vulnerability, exhaustive-path-tracing]
       taxonomies: [stack-lifetime-hazards]
       format: investigation-report
 
@@ -1408,6 +1418,28 @@ templates:
       protocols: [anti-hallucination, self-verification, adversarial-falsification, exhaustive-path-tracing]
       taxonomies: [kernel-defect-categories]
       format: exhaustive-review-report
+
+    - name: review-pull-request
+      path: templates/review-pull-request.md
+      description: >
+        Review a pull request's diff, commits, and linked issues.
+        Supports document mode (investigation report) or action mode
+        (post inline review comments via GitHub API). Language-agnostic
+        by default with optional language-specific focus.
+      persona: systems-engineer
+      protocols: [anti-hallucination, self-verification, operational-constraints]
+      format: investigation-report
+
+    - name: respond-to-pr-comments
+      path: templates/respond-to-pr-comments.md
+      description: >
+        Process PR review feedback and generate per-thread responses.
+        Supports document mode (response plan) or action mode (make
+        code fixes, post replies, resolve threads via GitHub API).
+        Detects contradictory feedback across reviewers.
+      persona: systems-engineer
+      protocols: [anti-hallucination, self-verification, operational-constraints]
+      format: pr-comment-responses
 
     - name: reconstruct-behavior
       path: templates/reconstruct-behavior.md
