@@ -143,9 +143,7 @@ is inlined in `cli.js`. See REQ-CLI-101, REQ-CLI-103.*
 interactive session.
 
 **Design decisions**:
-- CLI detection uses `execFileSync` with `where` (Windows) or `which`
-  (Unix) — this is the most reliable cross-platform way to check if a
-  command exists on PATH without actually executing it.
+- CLI detection uses direct PATH scanning for better Windows compatibility.
 - The detection order (copilot → gh-copilot → claude → codex) prioritizes GitHub
   Copilot CLI as the primary target. The `gh copilot` variant is checked
   by actually running `gh copilot --help` to verify the extension is
